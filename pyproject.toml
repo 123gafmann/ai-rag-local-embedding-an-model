@@ -1,0 +1,27 @@
+[project]
+name = "rag-3-0"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Abdul Gafoor", email = "123gafmann@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "langchain>=1.4.0",
+    "langchain-community>=0.4.2",
+    "langchain-core>=1.6.1",
+    "ollama>=0.6.0",
+    "pinecone[grpc]>=7.3.0,<8.0.0",
+    "pymupdf>=1.28.2",
+    "pypdf>=6.17.0",
+    "python-dotenv>=1.2.3",
+    "sentence-transformers>=6.0.1",
+]
+
+[project.scripts]
+rag-3-0 = "rag_3_0:main"
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"
