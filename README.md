@@ -24,10 +24,14 @@ The codebase is deliberately small and split by responsibility, so each piece ca
 src/
 ├── rag_3_0/          # Entry point — wires everything together (the "app")
 │   └── __init__.py       main(): ingest once, then an interactive query loop
+├── eval_harness/     # A second, independent entry point for testing quality
+│   └── __init__.py       main(): run eval/dataset.json through the same pipeline
 ├── utils/            # Small, stateless helper functions
 │   ├── pdf_loader.py     Load PDFs into LangChain Documents (one per page)
 │   ├── chunker.py        Split Documents into overlapping text chunks
-│   └── config.py         All environment-driven settings, in one place
+│   ├── config.py         All environment-driven settings, in one place
+│   ├── logging_config.py Sets up console + file logging (import-time side effect)
+│   └── timing.py         log_duration(): a context manager that times and logs a step
 └── managers/         # Stateful clients — one class per external system
     ├── embedding_manager.py   Wraps sentence-transformers (text -> vector)
     ├── pinecone_manager.py    Wraps Pinecone (create/connect/upsert/query)
@@ -87,10 +91,45 @@ On first run, it ingests every PDF in `test-pdf-files/` into the vector store; o
 
 ```
 Enter a search query (or 'exit' to quit):
-> what is the explosives act about
+> what are deliberative mini-publics
 ```
 
 Type `exit` (or `quit`, or an empty line) to stop.
+
+## Evaluation
+
+There's a small eval harness for checking retrieval and answer quality against a known set of questions, separate from the interactive app:
+
+```bash
+uv run rag-3-0-eval
+```
+
+It reads test cases from [`eval/dataset.json`](eval/dataset.json) — each one a `question`, the `expected_source_file` the answer should come from, and a `reference_answer`:
+
+```json
+{
+  "question": "What are deliberative mini-publics?",
+  "expected_source_file": "Democracy.pdf",
+  "reference_answer": "Small groups of randomly selected citizens..."
+}
+```
+
+For each question it runs the exact same retrieval + generation path as the real app, then checks two independent things:
+
+- **Retrieval**: did a chunk from `expected_source_file` actually come back from Pinecone, and at what rank? (hit rate + MRR — deterministic, no LLM involved)
+- **Answer quality**: is the generated answer judged correct against `reference_answer`? The judge is the same local Ollama model, given a separate grading prompt and asked to reply `CORRECT`/`INCORRECT`.
+
+Keeping these separate matters: high retrieval with low answer correctness points at prompting/generation, not the vector search. Requires the index to already be populated (run `uv run rag-3-0` first) — it evaluates against existing data rather than re-ingesting. Extend `eval/dataset.json` with your own questions as you add PDFs.
+
+## Observability
+
+Every stage of the pipeline is timed and logged, not just printed:
+
+- **Console**: structured `logging` output (timestamp, level, module) for every stage — model loading, chunking, embedding, Pinecone connect/upsert/query, and LLM generation — each with how long it took, e.g. `LLM generation (gemma4:12b) took 12.95s`. Noisy third-party libraries (`httpx`, `huggingface_hub`, etc.) are quieted to warnings-only so your own signal isn't buried.
+- **`logs/app.log`**: the same structured log, persisted across runs.
+- **`logs/llm_calls.log`**: a separate, dedicated trace of every LLM call — the full system prompt, the full context + question sent, and the full raw response. Kept out of the console (too verbose for interactive use) but invaluable for figuring out *why* a specific answer came out wrong.
+
+This is all local — no LangSmith/Langfuse account, just the standard library's `logging` module writing to files next to the code. Control verbosity with `LOG_LEVEL` (see below); `logs/` is gitignored.
 
 ## Configuration
 
@@ -105,6 +144,7 @@ All settings live in [`.env`](.env.example) — copy `.env.example` to `.env` an
 | `CHUNK_SIZE` / `CHUNK_OVERLAP` | `1000` / `200` | Text-splitting parameters |
 | `OLLAMA_HOST` | `http://localhost:11434` | Local Ollama server address |
 | `OLLAMA_MODEL` | `gemma4:12b` | Any model you've pulled with `ollama pull` |
+| `LOG_LEVEL` | `INFO` | Console log verbosity (e.g. `DEBUG`, `WARNING`); `logs/app.log` always captures `INFO`+ regardless |
 
 ## Notes
 

@@ -1,0 +1,42 @@
+[
+  {
+    "question": "Why is an accurate census count important for democracy?",
+    "expected_source_file": "Census.pdf",
+    "reference_answer": "Census counts determine political representation, such as congressional apportionment, and the allocation of federal funding, so an undercount can shortchange an area's representation and resources."
+  },
+  {
+    "question": "What is meant by a differential undercount in the census?",
+    "expected_source_file": "Census.pdf",
+    "reference_answer": "A differential undercount occurs when certain populations or geographic areas are undercounted more than others, disproportionately affecting their representation and funding."
+  },
+  {
+    "question": "Who wrote the Harvard Data Science Review article about the census and democracy?",
+    "expected_source_file": "Census.pdf",
+    "reference_answer": "Teresa A. Sullivan."
+  },
+  {
+    "question": "What role does social statistics play in supporting democratic institutions according to the article?",
+    "expected_source_file": "Census.pdf",
+    "reference_answer": "Social statistics like the census provide the factual basis used to allocate political representation and resources, underpinning democratic governance."
+  },
+  {
+    "question": "What are deliberative mini-publics?",
+    "expected_source_file": "Democracy.pdf",
+    "reference_answer": "Small groups of randomly selected citizens, such as citizens' juries, Deliberative Polls, or citizens' assemblies, convened to deliberate on political issues."
+  },
+  {
+    "question": "What is Cristina Lafont's main argument about giving decisional power to mini-publics?",
+    "expected_source_file": "Democracy.pdf",
+    "reference_answer": "She argues against conferring decisional status on deliberative mini-publics, favoring their use to inform rather than replace democratic decision-making by the broader citizenry."
+  },
+  {
+    "question": "What technique helps ensure diversity in the composition of mini-publics?",
+    "expected_source_file": "Democracy.pdf",
+    "reference_answer": "Stratified random sampling."
+  },
+  {
+    "question": "What are examples of deliberative mini-publics mentioned in the essay?",
+    "expected_source_file": "Democracy.pdf",
+    "reference_answer": "Citizens' juries, Deliberative Polls, and citizens' assemblies."
+  }
+]

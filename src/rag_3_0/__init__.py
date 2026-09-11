@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from utils import (
@@ -11,6 +12,8 @@ from utils import (
     OLLAMA_MODEL,
 )
 from managers import EmbeddingManager, PineconeManager, LLMManager
+
+logger = logging.getLogger(__name__)
 
 
 def ingest(embedding_manager: EmbeddingManager, pinecone_manager: PineconeManager):
@@ -30,7 +33,7 @@ def ingest(embedding_manager: EmbeddingManager, pinecone_manager: PineconeManage
     pinecone_manager.upsert_documents(ids, embeddings, metadatas)
 
     stats = pinecone_manager.index.describe_index_stats()
-    print(f"Done. Index stats: {stats}")
+    logger.info(f"Done. Index stats: {stats}")
 
 
 def query_loop(embedding_manager: EmbeddingManager, pinecone_manager: PineconeManager, llm_manager: LLMManager):
@@ -66,9 +69,9 @@ def main():
     llm_manager = LLMManager(model_name=OLLAMA_MODEL, host=OLLAMA_HOST)
 
     if pinecone_manager.get_vector_count() == 0:
-        print("Index is empty, ingesting PDFs...")
+        logger.info("Index is empty, ingesting PDFs...")
         ingest(embedding_manager, pinecone_manager)
     else:
-        print(f"Index already has {pinecone_manager.get_vector_count()} vectors, skipping ingest.")
+        logger.info(f"Index already has {pinecone_manager.get_vector_count()} vectors, skipping ingest.")
 
     query_loop(embedding_manager, pinecone_manager, llm_manager)

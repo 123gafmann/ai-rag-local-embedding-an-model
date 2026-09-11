@@ -1,9 +1,13 @@
+import logging
 from typing import List, Dict, Any
 
 from pinecone.grpc import PineconeGRPC, GRPCClientConfig
 from pinecone import ServerlessSpec
 
 from utils.config import PINECONE_API_KEY, PINECONE_HOST, PINECONE_INDEX_NAME
+from utils.timing import log_duration
+
+logger = logging.getLogger(__name__)
 
 
 class PineconeManager:
@@ -19,21 +23,22 @@ class PineconeManager:
             existing_indexes = self.client.list_indexes().names()
 
             if self.index_name not in existing_indexes:
-                print(f"Index '{self.index_name}' not found, creating it with dimension {self.dimension}...")
-                self.client.create_index(
-                    name=self.index_name,
-                    vector_type="dense",
-                    dimension=self.dimension,
-                    metric="cosine",
-                    spec=ServerlessSpec(cloud="aws", region="us-east-1"),
-                    deletion_protection="disabled",
-                )
+                logger.info(f"Index '{self.index_name}' not found, creating it with dimension {self.dimension}...")
+                with log_duration(logger, f"Creating index {self.index_name}"):
+                    self.client.create_index(
+                        name=self.index_name,
+                        vector_type="dense",
+                        dimension=self.dimension,
+                        metric="cosine",
+                        spec=ServerlessSpec(cloud="aws", region="us-east-1"),
+                        deletion_protection="disabled",
+                    )
 
             index_host = self.client.describe_index(name=self.index_name).host
             self.index = self.client.Index(host=index_host, grpc_config=GRPCClientConfig(secure=False))
-            print(f"Connected to Pinecone index: {self.index_name}")
+            logger.info(f"Connected to Pinecone index: {self.index_name}")
         except Exception as e:
-            print(f"Pinecone index connection error: {e}")
+            logger.error(f"Pinecone index connection error: {e}")
             raise
 
     def upsert_documents(self, ids: List[str], vectors, metadatas: List[Dict[str, Any]], batch_size: int = 100):
@@ -41,19 +46,20 @@ class PineconeManager:
             raise ValueError("Index not connected")
 
         records = list(zip(ids, vectors, metadatas))
-        print(f"Upserting {len(records)} vectors in batches of {batch_size}...")
+        logger.info(f"Upserting {len(records)} vectors in batches of {batch_size}...")
 
-        for i in range(0, len(records), batch_size):
-            batch = records[i:i + batch_size]
-            formatted_batch = [
-                {"id": vec_id, "values": vector.tolist(), "metadata": metadata}
-                for vec_id, vector, metadata in batch
-            ]
-            try:
-                self.index.upsert(vectors=formatted_batch)
-                print(f"Upserted batch {i // batch_size + 1} ({len(formatted_batch)} vectors)")
-            except Exception as e:
-                print(f"Upsert error on batch {i // batch_size + 1}: {e}")
+        with log_duration(logger, f"Upserting {len(records)} vectors"):
+            for i in range(0, len(records), batch_size):
+                batch = records[i:i + batch_size]
+                formatted_batch = [
+                    {"id": vec_id, "values": vector.tolist(), "metadata": metadata}
+                    for vec_id, vector, metadata in batch
+                ]
+                try:
+                    self.index.upsert(vectors=formatted_batch)
+                    logger.info(f"Upserted batch {i // batch_size + 1} ({len(formatted_batch)} vectors)")
+                except Exception as e:
+                    logger.error(f"Upsert error on batch {i // batch_size + 1}: {e}")
 
     def get_vector_count(self) -> int:
         if self.index is None:
@@ -66,5 +72,6 @@ class PineconeManager:
             raise ValueError("Index not connected")
 
         query_vector = vector.tolist() if hasattr(vector, "tolist") else vector
-        results = self.index.query(vector=query_vector, top_k=top_k, include_metadata=True)
+        with log_duration(logger, f"Pinecone query (top_k={top_k})"):
+            results = self.index.query(vector=query_vector, top_k=top_k, include_metadata=True)
         return results.get("matches", [])

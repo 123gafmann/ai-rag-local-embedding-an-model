@@ -21,6 +21,7 @@ dependencies = [
 
 [project.scripts]
 rag-3-0 = "rag_3_0:main"
+rag-3-0-eval = "eval_harness:main"
 
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]
